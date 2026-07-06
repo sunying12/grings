@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Growth Rings</title>
+<meta name="description" content="Growth Rings is Rare Flora's living archive of decisions, context, tradeoffs, and lessons over time.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gr-bg:#f6f1e8;
+  --gr-bg-soft:#fbf8f2;
+  --gr-bark:#5e4634;
+  --gr-bark-dark:#483425;
+  --gr-bark-light:#7d5f48;
+  --gr-moss:#59724a;
+  --gr-moss-dark:#42573a;
+  --gr-fern:#7d8f58;
+  --gr-sand:#dfcfb4;
+  --gr-card:#fffdf8;
+  --gr-ring:#caa979;
+  --gr-ring-light:#eadac3;
+  --gr-border:#e6dccd;
+  --gr-border-strong:#d6c7b0;
+  --gr-text:#2f271f;
+  --gr-muted:#75675a;
+  --gr-muted-2:#988a7c;
+  --gr-danger:#b4513e;
+  --gr-danger-dark:#963d2d;
+  --gr-shadow:0 2px 8px rgba(63,43,27,0.07);
+  --gr-shadow-hover:0 8px 22px rgba(63,43,27,0.12);
+}
+body{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(202,169,121,0.16), transparent 28%),
+    radial-gradient(circle at left center, rgba(89,114,74,0.10), transparent 30%),
+    var(--gr-bg);
+  color:var(--gr-text);
+  min-height:100vh;
+  display:flex;
+}
+button,input,select,textarea{font:inherit;}
+button{cursor:pointer;}
+/* SIDEBAR */
+.sidebar{
+  width:228px;
+  min-height:100vh;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  padding:1.25rem 0;
+  flex-shrink:0;
+  position:sticky;
+  top:0;
+  align-self:flex-start;
+  background:
+    radial-gradient(circle at 115% -10%, rgba(234,218,195,0.22), transparent 26%),
+    repeating-radial-gradient(circle at 110% 0%, rgba(255,255,255,0.07) 0 6px, rgba(255,255,255,0) 6px 22px),
+    linear-gradient(180deg, var(--gr-bark-light), var(--gr-bark));
+  border-right:1px solid rgba(255,255,255,0.08);
+}
+.sidebar-brand{padding:0 1.25rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.10);}
+.sidebar-brand .brand-name{font-size:1.2rem;font-weight:850;letter-spacing:-0.02em;}
+.sidebar-brand .brand-sub{font-size:0.75rem;color:rgba(255,255,255,0.72);margin-top:0.22rem;line-height:1.3;max-width:170px;}
+.nav-section{margin-top:1.15rem;}
+.nav-label{font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);padding:0 1.25rem;margin-bottom:0.45rem;}
+.nav-item{display:flex;align-items:center;gap:0.6rem;padding:0.56rem 1.25rem;font-size:0.89rem;color:rgba(255,255,255,0.80);cursor:pointer;transition:all 0.15s;position:relative;border-left:3px solid transparent;}
+.nav-item:hover{color:white;background:rgba(255,255,255,0.08);}
+.nav-item.active{color:white;background:rgba(255,250,243,0.15);border-left-color:var(--gr-ring-light);}
+.sidebar-foot{margin-top:auto;padding:1rem 1.25rem 0;border-top:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:rgba(255,255,255,0.74);line-height:1.45;}
+.sync-pill{display:inline-flex;align-items:center;gap:0.35rem;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:0.25rem 0.58rem;margin-top:0.55rem;color:white;font-size:0.68rem;}
+/* MAIN */
+.main{flex:1;overflow-y:auto;min-width:0;}
+.topbar{
+  background:rgba(255,253,248,0.92);
+  backdrop-filter:blur(10px);
+  padding:1rem 1.75rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--gr-border);
+  position:sticky;top:0;z-index:20;gap:1rem;
+}
+.topbar h1{font-size:1.26rem;font-weight:850;letter-spacing:-0.02em;color:var(--gr-bark-dark);}
+.topbar p{font-size:0.83rem;color:var(--gr-muted);margin-top:0.18rem;}
+.topbar-actions{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;}
+.page{display:none;padding:1.75rem;max-width:1140px;}
+.page.active{display:block;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.35rem;flex-wrap:wrap;gap:0.75rem;}
+.page-header h2{font-size:1.16rem;font-weight:850;letter-spacing:-0.015em;}
+.page-header p{font-size:0.87rem;color:var(--gr-muted);margin-top:0.25rem;max-width:700px;line-height:1.45;}
+/* BUTTONS */
+.btn{padding:0.46rem 1rem;border:none;border-radius:999px;cursor:pointer;font-size:0.83rem;font-weight:700;transition:all 0.15s;display:inline-flex;align-items:center;gap:0.35rem;text-decoration:none;}
+.btn-primary{background:var(--gr-moss);color:white;}.btn-primary:hover{background:var(--gr-moss-dark);}
+.btn-secondary{background:#efe8dc;color:var(--gr-bark-dark);}.btn-secondary:hover{background:#e7ddcd;}
+.btn-danger{background:var(--gr-danger);color:white;}.btn-danger:hover{background:var(--gr-danger-dark);}
+.btn-sm{padding:0.30rem 0.72rem;font-size:0.74rem;}
+.btn-delete-xs{padding:0.18rem 0.45rem;font-size:0.7rem;line-height:1.1;}
+.btn-ghost{background:transparent;color:var(--gr-moss);border:1px solid var(--gr-border-strong);}.btn-ghost:hover{background:#f4efe4;}
+/* COMMON UI */
+.grid{display:grid;gap:1rem;}
+.stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+.two-col{grid-template-columns:340px 1fr;align-items:start;}
+.card{background:var(--gr-card);border-radius:18px;box-shadow:var(--gr-shadow);border:1px solid rgba(110,83,48,0.06);overflow:hidden;}
+.card-pad{padding:1rem;}
+.card-title{font-size:0.94rem;font-weight:850;color:var(--gr-bark-dark);margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;}
+.card-subtitle{font-size:0.79rem;color:var(--gr-muted);line-height:1.45;margin-top:-0.45rem;margin-bottom:0.75rem;}
+.stat-card{
+  background:
+    radial-gradient(circle at right 120%, rgba(202,169,121,0.16), transparent 34%),
+    var(--gr-card);
+  border-radius:20px;box-shadow:var(--gr-shadow);padding:1rem;position:relative;overflow:hidden;border:1px solid rgba(110,83,48,0.05);
+}
+.stat-card:before{content:"";position:absolute;left:-12px;top:-14px;width:68px;height:68px;border-radius:50%;border:2px solid rgba(202,169,121,0.55);box-shadow:0 0 0 10px rgba(202,169,121,0.18),0 0 0 22px rgba(202,169,121,0.08);}
+.stat-card .num{font-size:1.78rem;font-weight:850;color:var(--gr-bark-dark);letter-spacing:-0.03em;display:block;position:relative;z-index:1;}
+.stat-card .label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gr-muted);font-weight:800;position:relative;z-index:1;}
+.stat-card .hint{font-size:0.78rem;color:var(--gr-muted-2);margin-top:0.35rem;position:relative;z-index:1;}
+.insight-card{background:#f8f2e8;border-left:4px solid var(--gr-ring);border-radius:14px;padding:0.9rem 1rem;color:#5c4c3e;font-size:0.88rem;line-height:1.48;box-shadow:var(--gr-shadow);}
+.empty{padding:2rem;text-align:center;color:var(--gr-muted);font-size:0.88rem;background:var(--gr-card);border-radius:16px;border:1px dashed var(--gr-border-strong);}
+/* FORMS */
+.form-card{position:sticky;top:82px;}
+.form-group{margin-bottom:0.8rem;}
+.form-group label{display:block;font-size:0.74rem;font-weight:800;text-transform:uppercase;letter-spacing:0.055em;color:var(--gr-muted);margin-bottom:0.32rem;}
+.form-group input,.form-group select,.form-group textarea{width:100%;border:1px solid var(--gr-border-strong);border-radius:12px;background:var(--gr-bg-soft);color:var(--gr-text);padding:0.6rem 0.72rem;font-size:0.86rem;outline:none;transition:all 0.15s;}
+.form-group textarea{min-height:66px;resize:vertical;line-height:1.45;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gr-moss);box-shadow:0 0 0 3px rgba(89,114,74,0.12);background:white;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+.status-line{min-height:1.2rem;margin-top:0.6rem;font-size:0.8rem;color:var(--gr-moss);}
+/* FILTERS */
+.filter-row{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;}
+.search{flex:1;min-width:190px;border:1px solid var(--gr-border-strong);border-radius:999px;background:var(--gr-card);padding:0.58rem 0.76rem;font-size:0.85rem;outline:none;}
+.search:focus{border-color:var(--gr-moss);box-shadow:0 0 0 3px rgba(89,114,74,0.12);}
+.chip{border:1px solid var(--gr-border-strong);background:var(--gr-card);color:var(--gr-muted);padding:0.38rem 0.74rem;border-radius:999px;font-size:0.75rem;font-weight:750;cursor:pointer;transition:all 0.15s;}
+.chip:hover{background:#f6efe5;color:var(--gr-text);}
+.chip.active{background:var(--gr-bark);border-color:var(--gr-bark);color:white;}
+/* DECISION CARDS */
+.decision-list{display:flex;flex-direction:column;gap:0.8rem;}
+.decision-card{background:var(--gr-card);border-radius:16px;box-shadow:var(--gr-shadow);border-left:4px solid var(--gr-moss);overflow:hidden;transition:all 0.15s;}
+.decision-card.clickable{cursor:pointer;}
+.decision-card.clickable:hover{box-shadow:var(--gr-shadow-hover);transform:translateY(-1px);}
+.decision-main{padding:0.95rem 1rem;}
+.decision-head{display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;}
+.decision-title{font-size:0.98rem;font-weight:850;color:var(--gr-bark-dark);line-height:1.35;}
+.decision-meta{font-size:0.74rem;color:var(--gr-muted);white-space:nowrap;margin-top:0.1rem;}
+.decision-sub{display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center;margin-top:0.55rem;color:var(--gr-muted);font-size:0.8rem;}
+.tag{display:inline-flex;align-items:center;gap:0.25rem;background:#f3ecdf;color:#5b4a38;border-radius:999px;padding:0.2rem 0.52rem;font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;}
+.tag.door-one{background:#f9e8e3;color:#9b4030;}.tag.door-two{background:#edf3e8;color:#42573a;}
+.decision-body{display:none;border-top:1px solid var(--gr-border);background:#fdfaf5;padding:0.9rem 1rem 1rem;}
+.decision-card.open .decision-body{display:block;}
+.block{margin-bottom:0.78rem;}
+.block h4{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gr-moss);font-weight:850;margin-bottom:0.18rem;}
+.block p{font-size:0.86rem;line-height:1.5;color:#3d342c;white-space:pre-wrap;}
+.card-actions{display:flex;justify-content:flex-end;gap:0.45rem;margin-top:0.5rem;}
+/* TIMELINE */
+.timeline-card-shell{background:var(--gr-card);border-radius:18px;box-shadow:var(--gr-shadow);overflow:hidden;border:1px solid rgba(110,83,48,0.05);}
+.timeline-scroll{overflow-x:auto;padding:1rem 0.8rem 0.5rem;background:radial-gradient(circle at center, rgba(234,218,195,0.14), transparent 55%);}
+.timeline-scroll svg{display:block;}
+.tl-baseline{stroke:#d8c8b1;stroke-width:2;}.tl-tick{stroke:#d8c8b1;stroke-width:1;}.tl-month-label{font-size:10px;fill:#7a6c5f;font-weight:700;}.tl-dot{cursor:pointer;stroke:white;stroke-width:1.5;}.tl-dot:hover{opacity:.78;}
+.legend{display:flex;gap:0.85rem;flex-wrap:wrap;padding:0.8rem 1rem 1rem;border-top:1px solid var(--gr-border);font-size:0.75rem;color:var(--gr-muted);}
+.legend-item{display:flex;align-items:center;gap:0.35rem;}.swatch{width:11px;height:11px;border-radius:50%;display:inline-block;}
+.detail-card{display:none;margin-top:1rem;background:var(--gr-card);border-radius:16px;box-shadow:var(--gr-shadow);border-left:4px solid var(--gr-moss);padding:1rem;}
+.detail-card.show{display:block;}
+.detail-top{display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;flex-wrap:wrap;}
+.detail-top h3{font-size:1rem;line-height:1.35;}.detail-meta{font-size:0.76rem;color:var(--gr-muted);}
+/* GUIDE */
+.guide-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+.guide-card{background:var(--gr-card);border-radius:16px;box-shadow:var(--gr-shadow);padding:1rem;border-top:3px solid var(--gr-ring);}
+.guide-card h3{font-size:0.96rem;margin-bottom:0.45rem;color:var(--gr-bark-dark);}.guide-card p,.guide-card li{font-size:0.85rem;color:#54483b;line-height:1.5;}.guide-card ul{padding-left:1rem;margin-top:0.45rem;}
+/* RESPONSIVE */
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}.form-card{position:static;}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.guide-grid{grid-template-columns:1fr;}.topbar{position:static;}}
+@media(max-width:640px){
+  .sidebar{width:54px;}.sidebar-brand{padding:0 0.6rem 1rem;text-align:center;}.sidebar-brand .brand-name{font-size:1rem;}.sidebar-brand .brand-sub,.nav-label,.nav-item span,.sidebar-foot{display:none;}.nav-item{justify-content:center;padding:0.6rem;}.page{padding:1rem;}.topbar{padding:0.9rem 1rem;}.topbar p{display:none;}.form-row{grid-template-columns:1fr;}.stats-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- Optional Firebase support. Paste your Firebase web config into FIREBASE_CONFIG below. -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-name">Growth Rings</div>
+    <div class="brand-sub">Rare Flora's living archive of decisions, tradeoffs, and lessons over time.</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Browse</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">🪵 <span>Overview</span></div>
+    <div class="nav-item" id="nav-add" onclick="showPage('add')">✍️ <span>Add Ring</span></div>
+    <div class="nav-item" id="nav-timeline" onclick="showPage('timeline')">🌳 <span>Growth Timeline</span></div>
+    <div class="nav-item" id="nav-ledger" onclick="showPage('ledger')">📚 <span>Archive</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Guide</div>
+    <div class="nav-item" id="nav-guide" onclick="showPage('guide')">🧭 <span>Field Guide</span></div>
+  </div>
+  <div class="sidebar-foot">
+    <div>Each decision adds another ring — a visible record of how the company grew.</div>
+    <div class="sync-pill" id="syncPill">● Local mode</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <h1 id="pageTitle">Growth Rings</h1>
+      <p id="pageSubtitle">A Rare Flora decision archive for context, reasoning, and long-term learning.</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('add')">＋ Add Ring</button>
+    </div>
+  </div>
+
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <h2>Overview</h2>
+        <p>See decision volume, one-way-door risk, and the latest rings your future team will want to understand.</p>
+      </div>
+    </div>
+    <div class="grid stats-grid">
+      <div class="stat-card"><span class="num" id="statTotal">—</span><span class="label">Total rings</span><div class="hint">Decisions preserved to date</div></div>
+      <div class="stat-card"><span class="num" id="statMonth">—</span><span class="label">This month</span><div class="hint">Current decision tempo</div></div>
+      <div class="stat-card"><span class="num" id="statYear">—</span><span class="label">This year</span><div class="hint">Annual learning volume</div></div>
+      <div class="stat-card"><span class="num" id="statOneWay">—</span><span class="label">One-way doors</span><div class="hint">Harder-to-reverse choices</div></div>
+    </div>
+    <div style="height:1rem"></div>
+    <div class="insight-card" id="insightLine">Opening Growth Rings…</div>
+    <div style="height:1rem"></div>
+    <div class="grid two-col">
+      <div class="card card-pad">
+        <div class="card-title">⚠️ Deep-cut rings</div>
+        <div class="card-subtitle">Decisions worth revisiting because they are hard to reverse.</div>
+        <div id="oneWayList" class="decision-list"></div>
+      </div>
+      <div class="card card-pad">
+        <div class="card-title">🕒 Fresh rings</div>
+        <div class="card-subtitle">Newest entries across the team archive.</div>
+        <div id="recentList" class="decision-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-add">
+    <div class="page-header">
+      <div>
+        <h2>Add a ring</h2>
+        <p>Write enough that a future hire can understand what happened without needing hallway context.</p>
+      </div>
+    </div>
+    <div class="grid two-col">
+      <div class="card card-pad form-card">
+        <div class="card-title">✍️ Ring intake</div>
+        <form id="decisionForm">
+          <div class="form-group">
+            <label>Decision, in one sentence</label>
+            <input type="text" id="f_title" required placeholder="e.g. Move billing to annual-only for new plans">
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Date</label><input type="date" id="f_date" required></div>
+            <div class="form-group"><label>Owner</label><input type="text" id="f_owner" required placeholder="Your name"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <select id="f_category">
+                <option>Strategy</option><option>Product</option><option>Process</option><option>Hiring</option><option>Finance</option><option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reversibility</label>
+              <select id="f_door">
+                <option value="two">Two-way door — easy to reverse</option>
+                <option value="one">One-way door — hard to reverse</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Context — what prompted this?</label><textarea id="f_context" placeholder="What problem, meeting, data, customer request, or constraint made this decision necessary?"></textarea></div>
+          <div class="form-group"><label>Options considered</label><textarea id="f_options" placeholder="What else did you weigh? Why not those options?"></textarea></div>
+          <div class="form-group"><label>Reasoning</label><textarea id="f_reasoning" placeholder="Why did this option win given what you knew at the time?"></textarea></div>
+          <div class="form-group"><label>Expected outcome</label><textarea id="f_outcome" placeholder="What should happen if this decision was right? What signal would prove/disprove it?"></textarea></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Save ring</button>
+          <div class="status-line" id="formStatus"></div>
+        </form>
+      </div>
+      <div class="card card-pad">
+        <div class="card-title">🪵 Growth Rings note</div>
+        <div class="insight-card">A good decision archive helps you see how the organization grew. The goal is not to prove you were right — it is to record what information was available, what tradeoff you chose, and when the choice should be revisited.</div>
+        <div style="height:1rem"></div>
+        <div class="guide-grid grid" style="grid-template-columns:1fr;">
+          <div class="guide-card"><h3>One-way door</h3><p>Hard to reverse. Examples: hiring, firing, cap table changes, customer commitments, legal commitments, expensive purchases.</p></div>
+          <div class="guide-card"><h3>Two-way door</h3><p>Easy to reverse. Examples: a temporary process, experiment, landing page, outreach script, or default meeting cadence.</p></div>
+          <div class="guide-card"><h3>Review rule</h3><p>For one-way doors, add extra context and review monthly. For two-way doors, move fast and revisit if the decision creates repeated friction.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-timeline">
+    <div class="page-header">
+      <div>
+        <h2>Growth timeline</h2>
+        <p>Each dot is a decision ring. Circles are two-way doors; diamonds are one-way doors.</p>
+      </div>
+    </div>
+    <div id="timelineFilters"></div>
+    <div class="timeline-card-shell">
+      <div class="timeline-scroll" id="timelineScroll"></div>
+      <div class="legend" id="timelineLegend"></div>
+    </div>
+    <div class="detail-card" id="detailCard"></div>
+  </div>
+
+  <div class="page" id="page-ledger">
+    <div class="page-header">
+      <div>
+        <h2>Archive</h2>
+        <p>Search across titles, owners, context, options, reasoning, and expected outcomes.</p>
+      </div>
+    </div>
+    <div id="listFilters"></div>
+    <div id="entryList" class="decision-list"></div>
+  </div>
+
+  <div class="page" id="page-guide">
+    <div class="page-header">
+      <div>
+        <h2>Field guide</h2>
+        <p>Use this as the team norm for making the archive useful rather than bureaucratic.</p>
+      </div>
+    </div>
+    <div class="grid guide-grid">
+      <div class="guide-card"><h3>1. Log the tradeoff</h3><p>Future people need to know what was sacrificed, not just what was chosen.</p><ul><li>Speed vs. certainty</li><li>Cost vs. quality</li><li>Customer value vs. scientific elegance</li></ul></div>
+      <div class="guide-card"><h3>2. Save rejected options</h3><p>This prevents the team from re-running the same conversation later.</p><ul><li>What did we not do?</li><li>Why was it rejected?</li><li>What would make it worth revisiting?</li></ul></div>
+      <div class="guide-card"><h3>3. Review patterns</h3><p>The efficiency gain comes from noticing how you decide over time.</p><ul><li>Are we over-indexing on speed?</li><li>Are decisions getting stuck?</li><li>Which categories create rework?</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FIREBASE_CONFIG = null;
+const FIREBASE_COLLECTION = 'growthRingsDecisions';
+const STORAGE_KEY = 'growth_rings_entries_v1';
+let entries = [];
+let activeFilter = 'all';
+let searchQuery = '';
+let selectedId = null;
+let currentPage = 'dashboard';
+let db = null;
+let usingFirebase = false;
+
+const CATEGORIES = ['All','Strategy','Product','Process','Hiring','Finance','Other'];
+const CAT_COLORS = {
+  Strategy:'#59724a', Product:'#c28b4e', Process:'#7f8f68', Hiring:'#b4513e', Finance:'#7462b5', Other:'#7f746a'
+};
+
+function $(id){ return document.getElementById(id); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function cleanDate(d){ return d || new Date().toISOString().slice(0,10); }
+function fmtDate(d){ const dt = new Date(cleanDate(d)+'T00:00:00'); return dt.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+function monthKey(d){ const dt=new Date(cleanDate(d)+'T00:00:00'); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); }
+function monthLabel(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString(undefined,{month:'short',year:'2-digit'}); }
+
+function setSyncLabel(text, good=true){
+  const pill = $('syncPill');
+  if(!pill) return;
+  pill.textContent = '● ' + text;
+  pill.style.background = good ? 'rgba(255,255,255,0.10)' : 'rgba(180,81,62,0.22)';
+}
+
+function initStorage(){
+  if(FIREBASE_CONFIG && window.firebase && firebase.firestore){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      usingFirebase = true;
+      setSyncLabel('Firebase shared mode');
+      db.collection(FIREBASE_COLLECTION).orderBy('date','desc').onSnapshot(snapshot=>{
+        entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderAll();
+      }, err=>{
+        console.error(err);
+        setSyncLabel('Firebase error — local fallback', false);
+        loadLocal();
+      });
+      return;
+    }catch(err){
+      console.error(err);
+      setSyncLabel('Firebase error — local fallback', false);
+    }
+  }
+  loadLocal();
+}
+
+function loadLocal(){
+  usingFirebase = false;
+  try{ entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch(e){ entries = []; }
+  setSyncLabel('Local mode');
+  renderAll();
+}
+function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+
+async function addEntry(entry){
+  if(usingFirebase && db){
+    await db.collection(FIREBASE_COLLECTION).add({ ...entry, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }else{
+    entries.push({ ...entry, id: uid(), createdAt: Date.now() });
+    saveLocal();
+    renderAll();
+  }
+}
+async function removeEntry(id){
+  if(!confirm('Remove this ring from Growth Rings?')) return;
+  if(usingFirebase && db){ await db.collection(FIREBASE_COLLECTION).doc(id).delete(); }
+  else{ entries = entries.filter(e=>e.id!==id); saveLocal(); renderAll(); }
+  if(selectedId === id) selectedId = null;
+}
+
+const PAGE_COPY = {
+  dashboard:['Growth Rings','A Rare Flora decision archive for context, reasoning, and long-term learning.'],
+  add:['Add Ring','Capture the tradeoff while the reasoning is still fresh.'],
+  timeline:['Growth Timeline','See how team choices accumulate over time.'],
+  ledger:['Archive','Search and expand the company decision record.'],
+  guide:['Field Guide','Team norms for useful decision memory.']
+};
+function showPage(page){
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  $('page-'+page).classList.add('active');
+  $('nav-'+page).classList.add('active');
+  $('pageTitle').textContent = PAGE_COPY[page][0];
+  $('pageSubtitle').textContent = PAGE_COPY[page][1];
+  if(page==='timeline') renderTimeline();
+  if(page==='ledger') renderList();
+  if(page==='dashboard') renderDashboard();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function filterMarkup(scope){
+  return `<div class="filter-row">
+    <input class="search" id="${scope}Search" type="text" value="${esc(searchQuery)}" placeholder="Search title, owner, reasoning…">
+    ${CATEGORIES.map(cat=>`<button class="chip ${activeFilter===(cat==='All'?'all':cat)?'active':''}" data-filter="${cat==='All'?'all':cat}">${cat}</button>`).join('')}
+  </div>`;
+}
+function wireFilters(scope){
+  const search = $(scope+'Search');
+  if(search){ search.addEventListener('input', e=>{ searchQuery = e.target.value.trim().toLowerCase(); renderList(); renderTimeline(); renderDashboard(); }); }
+  document.querySelectorAll(`#${scope==='list'?'listFilters':'timelineFilters'} .chip`).forEach(chip=>{
+    chip.addEventListener('click', ()=>{ activeFilter = chip.getAttribute('data-filter'); renderAll(); });
+  });
+}
+function matchesFilter(e){
+  const catOk = activeFilter==='all' || e.category===activeFilter;
+  if(!searchQuery) return catOk;
+  const hay = [e.title,e.owner,e.context,e.options,e.reasoning,e.outcome,e.category].join(' ').toLowerCase();
+  return catOk && hay.includes(searchQuery);
+}
+function sortedEntries(desc=true){
+  return [...entries].sort((a,b)=> desc ? new Date(cleanDate(b.date))-new Date(cleanDate(a.date)) : new Date(cleanDate(a.date))-new Date(cleanDate(b.date)));
+}
+
+function renderAll(){
+  $('listFilters').innerHTML = filterMarkup('list'); wireFilters('list');
+  $('timelineFilters').innerHTML = filterMarkup('timeline'); wireFilters('timeline');
+  renderDashboard();
+  renderList();
+  renderTimeline();
+}
+function renderDashboard(){
+  const now = new Date();
+  const thisMonth = entries.filter(e=>{ const d=new Date(cleanDate(e.date)+'T00:00:00'); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }).length;
+  const thisYear = entries.filter(e=> new Date(cleanDate(e.date)+'T00:00:00').getFullYear()===now.getFullYear()).length;
+  const oneWay = entries.filter(e=>e.door==='one').length;
+  $('statTotal').textContent = entries.length;
+  $('statMonth').textContent = thisMonth;
+  $('statYear').textContent = thisYear;
+  $('statOneWay').textContent = oneWay;
+
+  if(entries.length===0){
+    $('insightLine').textContent = 'No rings logged yet — the first one starts the company memory.';
+  }else{
+    const byCat = {};
+    entries.forEach(e=>{ byCat[e.category]=(byCat[e.category]||0)+1; });
+    const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+    const owners = new Set(entries.map(e=>(e.owner||'').trim().toLowerCase()).filter(Boolean)).size;
+    $('insightLine').textContent = `${thisMonth} logged this month · most common category: ${topCat[0]} (${topCat[1]}) · ${oneWay} one-way door${oneWay===1?'':'s'} · ${owners} contributor${owners===1?'':'s'}.`;
+  }
+
+  renderMiniList('recentList', sortedEntries(true).slice(0,5), 'No rings yet. Add the first one.');
+  renderMiniList('oneWayList', sortedEntries(true).filter(e=>e.door==='one').slice(0,5), 'No one-way doors logged yet.');
+}
+function renderMiniList(id, arr, emptyMsg){
+  const node = $(id);
+  if(!node) return;
+  if(!arr.length){ node.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
+  node.innerHTML = arr.map(e=>decisionCard(e,false)).join('');
+}
+function decisionCard(e, expandable=true){
+  const color = CAT_COLORS[e.category] || CAT_COLORS.Other;
+  return `<div class="decision-card ${expandable?'clickable':''}" data-id="${esc(e.id)}" style="border-left-color:${color}">
+    <div class="decision-main">
+      <div class="decision-head">
+        <div class="decision-title">${esc(e.title)}</div>
+        <div class="decision-meta">${fmtDate(e.date)}</div>
+      </div>
+      <div class="decision-sub">
+        <span class="tag">${esc(e.category)}</span>
+        <span class="tag ${e.door==='one'?'door-one':'door-two'}">${e.door==='one'?'One-way door':'Two-way door'}</span>
+        <span>${esc(e.owner)}</span>
+      </div>
+    </div>
+    ${expandable ? `<div class="decision-body">
+      ${block('Context',e.context)}${block('Options considered',e.options)}${block('Reasoning',e.reasoning)}${block('Expected outcome',e.outcome)}
+      <div class="card-actions"><button class="btn btn-danger btn-delete-xs" onclick="event.stopPropagation(); removeEntry('${esc(e.id)}')">🗑️</button></div>
+    </div>` : ''}
+  </div>`;
+}
+function block(label,value){ return value ? `<div class="block"><h4>${label}</h4><p>${esc(value)}</p></div>` : ''; }
+function renderList(){
+  const node = $('entryList');
+  if(!node) return;
+  const shown = sortedEntries(true).filter(matchesFilter);
+  if(!shown.length){ node.innerHTML = '<div class="empty">No rings match this search/filter.</div>'; return; }
+  node.innerHTML = shown.map(e=>decisionCard(e,true)).join('');
+  node.querySelectorAll('.decision-card.clickable').forEach(card=>{
+    card.addEventListener('click',()=>card.classList.toggle('open'));
+  });
+}
+function renderTimeline(){
+  const scrollWrap = $('timelineScroll');
+  const legend = $('timelineLegend');
+  if(!scrollWrap || !legend) return;
+  const shown = entries.filter(matchesFilter).sort((a,b)=> new Date(cleanDate(a.date))-new Date(cleanDate(b.date)));
+  if(entries.length===0){ scrollWrap.innerHTML = '<div class="empty">No rings logged yet. Add your first one.</div>'; legend.innerHTML=''; $('detailCard').classList.remove('show'); return; }
+  if(!shown.length){ scrollWrap.innerHTML = '<div class="empty">No rings match this search/filter.</div>'; legend.innerHTML=''; $('detailCard').classList.remove('show'); return; }
+  const allDates = entries.map(e=>new Date(cleanDate(e.date)+'T00:00:00'));
+  const minD = new Date(Math.min.apply(null,allDates));
+  const maxD = new Date(Math.max.apply(null,allDates));
+  const months = [];
+  let cur = new Date(minD.getFullYear(),minD.getMonth(),1);
+  const end = new Date(maxD.getFullYear(),maxD.getMonth(),1);
+  while(cur<=end){ months.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')); cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); }
+  const byMonth = {};
+  shown.forEach(e=>{ const k=monthKey(e.date); (byMonth[k]=byMonth[k]||[]).push(e); });
+  let maxStack = 1; Object.values(byMonth).forEach(a=>maxStack=Math.max(maxStack,a.length));
+  const colWidth=105,leftPad=52,rowSpacing=21,dotR=7,baselineY=maxStack*rowSpacing+42,width=Math.max(months.length*colWidth+leftPad+32,480),height=baselineY+42;
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<line x1="${leftPad-22}" y1="${baselineY}" x2="${width-12}" y2="${baselineY}" class="tl-baseline"/>`;
+  months.forEach((m,i)=>{
+    const x = leftPad + i*colWidth;
+    svg += `<line x1="${x}" y1="${baselineY-4}" x2="${x}" y2="${baselineY+4}" class="tl-tick"/>`;
+    svg += `<text x="${x}" y="${baselineY+20}" text-anchor="middle" class="tl-month-label">${monthLabel(m)}</text>`;
+    (byMonth[m]||[]).forEach((e,stackIdx)=>{
+      const y = baselineY - 16 - stackIdx*rowSpacing;
+      const color = CAT_COLORS[e.category] || CAT_COLORS.Other;
+      if(e.door==='one'){
+        svg += `<polygon points="${x},${y-dotR} ${x+dotR},${y} ${x},${y+dotR} ${x-dotR},${y}" fill="${color}" class="tl-dot" data-id="${esc(e.id)}"/>`;
+      }else{
+        svg += `<circle cx="${x}" cy="${y}" r="${dotR}" fill="${color}" class="tl-dot" data-id="${esc(e.id)}"/>`;
+      }
+    });
+  });
+  svg += '</svg>';
+  scrollWrap.innerHTML = svg;
+  scrollWrap.querySelectorAll('.tl-dot').forEach(dot=>dot.addEventListener('click',()=>{ selectedId = dot.getAttribute('data-id'); renderDetail(); }));
+  scrollWrap.scrollLeft = scrollWrap.scrollWidth;
+  legend.innerHTML = Object.keys(CAT_COLORS).map(cat=>`<span class="legend-item"><span class="swatch" style="background:${CAT_COLORS[cat]}"></span>${cat}</span>`).join('') +
+    '<span class="legend-item"><span class="swatch" style="background:#7f746a"></span>Circle = two-way</span><span class="legend-item"><span style="display:inline-block;width:11px;height:11px;background:#7f746a;transform:rotate(45deg);"></span>Diamond = one-way</span>';
+  renderDetail();
+}
+function renderDetail(){
+  const card = $('detailCard');
+  const e = entries.find(x=>x.id===selectedId);
+  if(!card || !e){ if(card){card.classList.remove('show');card.innerHTML='';} return; }
+  const color = CAT_COLORS[e.category] || CAT_COLORS.Other;
+  card.style.borderLeftColor = color;
+  card.classList.add('show');
+  card.innerHTML = `<div class="detail-top"><h3>${esc(e.title)}</h3><div class="detail-meta">${fmtDate(e.date)} · ${esc(e.owner)}</div></div>
+    <div class="decision-sub"><span class="tag">${esc(e.category)}</span><span class="tag ${e.door==='one'?'door-one':'door-two'}">${e.door==='one'?'One-way door':'Two-way door'}</span></div>
+    ${block('Context',e.context)}${block('Options considered',e.options)}${block('Reasoning',e.reasoning)}${block('Expected outcome',e.outcome)}
+    <div class="card-actions"><button class="btn btn-danger btn-delete-xs" onclick="removeEntry('${esc(e.id)}')">🗑️</button></div>`;
+}
+
+function resetForm(){ $('decisionForm').reset(); $('f_date').valueAsDate = new Date(); }
+$('decisionForm').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const entry = {
+    title:$('f_title').value.trim(), date:$('f_date').value, owner:$('f_owner').value.trim(), category:$('f_category').value, door:$('f_door').value,
+    context:$('f_context').value.trim(), options:$('f_options').value.trim(), reasoning:$('f_reasoning').value.trim(), outcome:$('f_outcome').value.trim()
+  };
+  if(!entry.title || !entry.owner) return;
+  try{
+    await addEntry(entry);
+    resetForm();
+    $('formStatus').style.color = 'var(--gr-moss)';
+    $('formStatus').textContent = 'Ring saved.';
+    setTimeout(()=>$('formStatus').textContent='',2400);
+    showPage('dashboard');
+  }catch(err){
+    console.error(err);
+    $('formStatus').style.color = 'var(--gr-danger)';
+    $('formStatus').textContent = 'Could not save. Check Firebase config/rules, or use local mode.';
+  }
+});
+function exportCSV(){
+  const headers = ['date','owner','category','door','title','context','options','reasoning','outcome'];
+  const rows = [headers.join(',')].concat(sortedEntries(false).map(e=>headers.map(h=>`"${String(e[h]||'').replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'growth-rings-export.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+resetForm();
+initStorage();
+</script>
+</body>
+</html>
