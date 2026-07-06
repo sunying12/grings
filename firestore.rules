@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Quick private prototype only. Replace with authenticated rules before broad sharing.
+    match /decisionLedger/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
