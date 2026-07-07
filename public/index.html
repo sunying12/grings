@@ -165,6 +165,14 @@ button{cursor:pointer;}
 .guide-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 .guide-card{background:var(--gr-card);border-radius:16px;box-shadow:var(--gr-shadow);padding:1rem;border-top:3px solid var(--gr-ring);}
 .guide-card h3{font-size:0.96rem;margin-bottom:0.45rem;color:var(--gr-bark-dark);}.guide-card p,.guide-card li{font-size:0.85rem;color:#54483b;line-height:1.5;}.guide-card ul{padding-left:1rem;margin-top:0.45rem;}
+
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;z-index:999;background:rgba(47,39,31,0.72);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:1rem;}
+.auth-card{width:min(420px,100%);background:var(--gr-card);border-radius:22px;box-shadow:0 18px 50px rgba(25,17,10,0.28);border:1px solid rgba(255,255,255,0.45);padding:1.25rem;}
+.auth-card h2{font-size:1.25rem;color:var(--gr-bark-dark);margin-bottom:0.35rem;}
+.auth-card p{font-size:0.86rem;color:var(--gr-muted);line-height:1.45;margin-bottom:1rem;}
+.auth-user{font-size:0.76rem;color:var(--gr-muted);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.auth-help{font-size:0.76rem;color:var(--gr-muted-2);line-height:1.4;margin-top:0.8rem;}
 /* RESPONSIVE */
 @media(max-width:900px){.two-col{grid-template-columns:1fr;}.form-card{position:static;}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.guide-grid{grid-template-columns:1fr;}.topbar{position:static;}}
 @media(max-width:640px){
@@ -177,6 +185,27 @@ button{cursor:pointer;}
 <!-- Optional Firebase support. Paste your Firebase web config into FIREBASE_CONFIG below. -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>Sign in to Growth Rings</h2>
+    <p>This archive is locked with Firebase Authentication. Use an approved account to read or save decision rings.</p>
+    <form id="authForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required placeholder="Firebase Auth password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Sign in</button>
+      <div class="status-line" id="authStatus"></div>
+    </form>
+    <div class="auth-help">Create users in Firebase Console → Authentication → Users. Firestore rules should allow only approved signed-in emails.</div>
+  </div>
+</div>
 
 <div class="sidebar">
   <div class="sidebar-brand">
@@ -207,6 +236,8 @@ button{cursor:pointer;}
       <p id="pageSubtitle">A Rare Flora decision archive for context, reasoning, and long-term learning.</p>
     </div>
     <div class="topbar-actions">
+      <span class="auth-user" id="authUser"></span>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn" onclick="signOutUser()" style="display:none;">Sign out</button>
       <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
       <button class="btn btn-primary btn-sm" onclick="showPage('add')">＋ Add Ring</button>
     </div>
@@ -355,6 +386,8 @@ let searchQuery = '';
 let selectedId = null;
 let currentPage = 'dashboard';
 let db = null;
+let auth = null;
+let unsubscribeSnapshot = null;
 let usingFirebase = false;
 
 const CATEGORIES = ['All','Strategy','Product','Process','Hiring','Finance','Other'];
@@ -377,27 +410,99 @@ function setSyncLabel(text, good=true){
   pill.style.background = good ? 'rgba(255,255,255,0.10)' : 'rgba(180,81,62,0.22)';
 }
 
-function initStorage(){
-  if(FIREBASE_CONFIG && window.firebase && firebase.firestore){
+function wireAuthForm(){
+  const form = $('authForm');
+  if(!form) return;
+  form.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const email = $('authEmail').value.trim();
+    const password = $('authPassword').value;
+    if(!auth){
+      $('authStatus').style.color = 'var(--gr-danger)';
+      $('authStatus').textContent = 'Firebase Auth is not connected.';
+      return;
+    }
     try{
-      firebase.initializeApp(FIREBASE_CONFIG);
+      $('authStatus').style.color = 'var(--gr-muted)';
+      $('authStatus').textContent = 'Signing in…';
+      await auth.signInWithEmailAndPassword(email, password);
+      $('authPassword').value = '';
+      $('authStatus').textContent = '';
+    }catch(err){
+      console.error(err);
+      $('authStatus').style.color = 'var(--gr-danger)';
+      $('authStatus').textContent = cleanAuthError(err);
+    }
+  });
+}
+function cleanAuthError(err){
+  const code = err && err.code ? err.code : '';
+  if(code.includes('wrong-password') || code.includes('invalid-credential')) return 'Wrong email or password.';
+  if(code.includes('user-not-found')) return 'No Firebase Auth user found for that email.';
+  if(code.includes('too-many-requests')) return 'Too many attempts. Wait a bit and try again.';
+  return 'Could not sign in. Check Firebase Authentication settings.';
+}
+function setSignedInUI(user){
+  const overlay = $('authOverlay');
+  if(overlay) overlay.style.display = 'none';
+  if($('authUser')) $('authUser').textContent = user && user.email ? user.email : 'Signed in';
+  if($('logoutBtn')) $('logoutBtn').style.display = 'inline-flex';
+}
+function setSignedOutUI(){
+  const overlay = $('authOverlay');
+  if(overlay) overlay.style.display = 'flex';
+  if($('authUser')) $('authUser').textContent = '';
+  if($('logoutBtn')) $('logoutBtn').style.display = 'none';
+}
+async function signOutUser(){
+  if(auth){ await auth.signOut(); }
+}
+
+function initStorage(){
+  if(FIREBASE_CONFIG && window.firebase && firebase.firestore && firebase.auth){
+    try{
+      if(!firebase.apps.length){ firebase.initializeApp(FIREBASE_CONFIG); }
       db = firebase.firestore();
-      usingFirebase = true;
-      setSyncLabel('Firebase shared mode');
-      db.collection(FIREBASE_COLLECTION).orderBy('date','desc').onSnapshot(snapshot=>{
-        entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderAll();
-      }, err=>{
-        console.error(err);
-        setSyncLabel('Firebase error — local fallback', false);
-        loadLocal();
+      auth = firebase.auth();
+      setSyncLabel('Login required', false);
+
+      auth.onAuthStateChanged(user=>{
+        if(unsubscribeSnapshot){ unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+
+        if(!user){
+          usingFirebase = false;
+          entries = [];
+          setSignedOutUI();
+          setSyncLabel('Login required', false);
+          renderAll();
+          return;
+        }
+
+        usingFirebase = true;
+        setSignedInUI(user);
+        setSyncLabel('Firebase shared mode');
+        unsubscribeSnapshot = db.collection(FIREBASE_COLLECTION).orderBy('date','desc').onSnapshot(snapshot=>{
+          entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderAll();
+        }, err=>{
+          console.error(err);
+          entries = [];
+          renderAll();
+          setSyncLabel('Firestore rules blocked access', false);
+          if($('authStatus')){
+            $('authStatus').style.color = 'var(--gr-danger)';
+            $('authStatus').textContent = 'Signed in, but Firestore rules blocked this account. Check approved emails in your rules.';
+          }
+        });
       });
       return;
     }catch(err){
       console.error(err);
-      setSyncLabel('Firebase error — local fallback', false);
+      setSyncLabel('Firebase setup error', false);
     }
   }
+
+  // Local mode is only a fallback for development. It is not shared or protected by Firebase rules.
   loadLocal();
 }
 
@@ -405,19 +510,26 @@ function loadLocal(){
   usingFirebase = false;
   try{ entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
   catch(e){ entries = []; }
-  setSyncLabel('Local mode');
+  setSignedInUI({ email: 'Local only' });
+  setSyncLabel('Local mode', false);
   renderAll();
 }
 function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
 
 async function addEntry(entry){
-  if(usingFirebase && db){
-    await db.collection(FIREBASE_COLLECTION).add({ ...entry, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  }else{
-    entries.push({ ...entry, id: uid(), createdAt: Date.now() });
-    saveLocal();
-    renderAll();
+  if(usingFirebase && db && auth && auth.currentUser){
+    await db.collection(FIREBASE_COLLECTION).add({
+      ...entry,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy: auth.currentUser.email || null
+    });
+    return 'firebase';
   }
+
+  entries.push({ ...entry, id: uid(), createdAt: Date.now() });
+  saveLocal();
+  renderAll();
+  return 'local';
 }
 async function removeEntry(id){
   if(!confirm('Remove this ring from Growth Rings?')) return;
@@ -601,11 +713,16 @@ $('decisionForm').addEventListener('submit', async (ev)=>{
   };
   if(!entry.title || !entry.owner) return;
   try{
-    await addEntry(entry);
+    const saveMode = await addEntry(entry);
     resetForm();
-    $('formStatus').style.color = 'var(--gr-moss)';
-    $('formStatus').textContent = 'Ring saved.';
-    setTimeout(()=>$('formStatus').textContent='',2400);
+    if(saveMode === 'firebase'){
+      $('formStatus').style.color = 'var(--gr-moss)';
+      $('formStatus').textContent = 'Ring saved to Firebase.';
+    }else{
+      $('formStatus').style.color = 'var(--gr-danger)';
+      $('formStatus').textContent = 'Saved locally only — Firebase is not connected.';
+    }
+    setTimeout(()=>$('formStatus').textContent='',3000);
     showPage('dashboard');
   }catch(err){
     console.error(err);
@@ -624,6 +741,7 @@ function exportCSV(){
 }
 
 resetForm();
+wireAuthForm();
 initStorage();
 </script>
 </body>
