@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Growth Rings</title>
+<!-- GitHub Pages version with Firebase Firestore enabled. Upload this file as index.html at the repo root. -->
 <meta name="description" content="Growth Rings is Rare Flora's living archive of decisions, context, tradeoffs, and lessons over time.">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -412,12 +413,17 @@ function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
 
 async function addEntry(entry){
   if(usingFirebase && db){
-    await db.collection(FIREBASE_COLLECTION).add({ ...entry, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  }else{
-    entries.push({ ...entry, id: uid(), createdAt: Date.now() });
-    saveLocal();
-    renderAll();
+    await db.collection(FIREBASE_COLLECTION).add({
+      ...entry,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return 'firebase';
   }
+
+  entries.push({ ...entry, id: uid(), createdAt: Date.now() });
+  saveLocal();
+  renderAll();
+  return 'local';
 }
 async function removeEntry(id){
   if(!confirm('Remove this ring from Growth Rings?')) return;
@@ -601,11 +607,16 @@ $('decisionForm').addEventListener('submit', async (ev)=>{
   };
   if(!entry.title || !entry.owner) return;
   try{
-    await addEntry(entry);
+    const saveMode = await addEntry(entry);
     resetForm();
-    $('formStatus').style.color = 'var(--gr-moss)';
-    $('formStatus').textContent = 'Ring saved.';
-    setTimeout(()=>$('formStatus').textContent='',2400);
+    if(saveMode === 'firebase'){
+      $('formStatus').style.color = 'var(--gr-moss)';
+      $('formStatus').textContent = 'Ring saved to Firebase.';
+    }else{
+      $('formStatus').style.color = 'var(--gr-danger)';
+      $('formStatus').textContent = 'Saved locally only — Firebase is not connected.';
+    }
+    setTimeout(()=>$('formStatus').textContent='',3000);
     showPage('dashboard');
   }catch(err){
     console.error(err);
